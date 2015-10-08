@@ -22,6 +22,6 @@ func main() {
 	fmt.Println(myName)
 	// Now print "and" here
 	// and then print out your friends name on the same line
-	// as the “and”.
+	// as the "and".
 
 } // don't forget the last brace at the bottom
