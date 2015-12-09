@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	// the colours are defined in the file caled palette.go in the mandlebrot directory
-	"mandelbrot/palette"
+	"github.com/gophercoders/codeclub/mandelbrot/palette"
 
 	// This is the graphics library we are going to use. It is called the
 	// Simple Direct Media Library. SDL for short. We need this to create the
