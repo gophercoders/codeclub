@@ -22,6 +22,19 @@ var window *sdl.Window
 // that actually does the drawing
 var renderer *sdl.Renderer
 
+// These constants are important. They are the width and height of the window
+// A constant just menas you can't change these values once the
+// program starts running
+// If you change these you will change the size of the image
+// Try 800 for the width and 600 for the height
+const windowWidth = 1024
+const windowHeight = 768
+
+// Plot stores the colour of every point on the screen
+// Technically this is an "array" but you can just think of
+// this as a very very long list!
+var plot [windowWidth][windowHeight]sdl.Color
+
 // The programs main function
 func main() {
 	// ---- This is the start of Owen's graphics setup code ----
@@ -188,7 +201,7 @@ func main() {
 					// we escaped! So this value of c is NOT in the set
 				}
 				// You did not escape. So now you need to calculate the new value of Z
-				// First you need to calculate the new valeu of Z's imaginary part
+				// First you need to calculate the new value of Z's imaginary part
 				// set zIm to 2 * zRe * zIm + currentIm
 
 				// now you need to calculate a new value of Z's real part
@@ -212,13 +225,14 @@ func main() {
 
 			// now make x bigger here!
 		}
-	// now make y bigger here
+		// now make y bigger here
 
-	// uncomment the next line to see the image drawn one line at a time
-	//renderer.Present()
+		// uncomment the next line to see the image drawn one line at a time
+		// Warning: The program will be a LOT slower!
+		//render(x, y)
 	}
-	// This line shows you the finsihed picture
-	renderer.Present()
+	// This line draws the finished picture
+	render(windowWidth, windowHeight)
 
 	// Tell the user that you have finished
 	fmt.Println("Finished")
@@ -260,8 +274,33 @@ func getColor(count int) sdl.Color {
 
 // Plot the point x, y on window with the colour c
 func drawPoint(x, y int, c sdl.Color) {
-	renderer.SetDrawColor(c.R, c.G, c.B, c.A)
-	_ = renderer.DrawPoint(x, y)
+	plot[x][y].R = c.R
+	plot[x][y].G = c.G
+	plot[x][y].B = c.B
+	plot[x][y].A = c.A
+}
+
+// Render or Draw the picture to the window
+func render(maxX, maxY int) {
+	var x int
+	var y int
+	x = 0
+	y = 0
+	renderer.Clear()
+	for y < maxY {
+		for x < maxX {
+			renderer.SetDrawColor(plot[x][y].R, plot[x][y].G, plot[x][y].B, plot[x][y].A)
+			var err error
+			err = renderer.DrawPoint(x, y)
+			if err != nil {
+				panic(err)
+			}
+			x = x + 1
+		}
+		y = y + 1
+		x = 0
+	}
+	renderer.Present()
 }
 
 // Wait for the event that tells us that the user has pressed windows close

@@ -23,6 +23,19 @@ var window *sdl.Window
 // that actually does the drawing
 var renderer *sdl.Renderer
 
+// These constants are important. They are the width and height of the window
+// A constant just menas you can't change these values once the
+// program starts running
+// If you change these you will change the size of the image
+// Try 800 for the width and 600 for the height
+const windowWidth = 1024
+const windowHeight = 768
+
+// Plot stores the colour of every point on the screen
+// Technically this is an "array" but you can just think of
+// this as a very very long list!
+var plot [windowWidth][windowHeight]sdl.Color
+
 // The programs main function
 func main() {
 	// ---- This is the start of Owen's graphics setup code ----
@@ -33,14 +46,6 @@ func main() {
 	// This means that go will automatically call the function sdl.Quit() before
 	// the program exits for us. We don't have to remember to put this at the end!
 	defer sdl.Quit()
-
-	// These variabels are important. They are the width and height of the window
-	// If you change these you will change the size of the image
-	var windowWidth int
-	var windowHeight int
-	// if you want to change these try 800 for the width and 600 for the height
-	windowWidth = 1024
-	windowHeight = 768
 
 	// Now we have to create the window we want to use.
 	// We need to tell the SDL library how big to make the window - that's what
@@ -241,17 +246,18 @@ func main() {
 		// now make y bigger here
 		y = y + 1
 		// uncomment the next line to see the image drawn one line at a time
-		//renderer.Present()
+		// Warning: The program will be a LOT slower!
+		//render(x, y)
 	}
-	// This line shows you the finsihed picture
-	renderer.Present()
+	// This line draws the finished picture
+	render(windowWidth, windowHeight)
 
 	// Tell the user that you have finished
 	fmt.Println("Finished")
 
 	var endTime time.Time
 	endTime = time.Now()
-	fmt.Printf("The call took %v to run.\n", endTime.Sub(startTime))
+	fmt.Printf("The program took %v to run.\n", endTime.Sub(startTime))
 	// wait until you close the window before the program ends.
 	waitUntilCloseButtonIsPressed()
 }
@@ -290,8 +296,33 @@ func getColor(count int) sdl.Color {
 
 // Plot the point x, y on window with the colour c
 func drawPoint(x, y int, c sdl.Color) {
-	renderer.SetDrawColor(c.R, c.G, c.B, c.A)
-	_ = renderer.DrawPoint(x, y)
+	plot[x][y].R = c.R
+	plot[x][y].G = c.G
+	plot[x][y].B = c.B
+	plot[x][y].A = c.A
+}
+
+// Render or Draw the picture to the window
+func render(maxX, maxY int) {
+	var x int
+	var y int
+	x = 0
+	y = 0
+	renderer.Clear()
+	for y < maxY {
+		for x < maxX {
+			renderer.SetDrawColor(plot[x][y].R, plot[x][y].G, plot[x][y].B, plot[x][y].A)
+			var err error
+			err = renderer.DrawPoint(x, y)
+			if err != nil {
+				panic(err)
+			}
+			x = x + 1
+		}
+		y = y + 1
+		x = 0
+	}
+	renderer.Present()
 }
 
 // Wait for the event that tells us that the user has pressed windows close
