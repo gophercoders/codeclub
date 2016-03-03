@@ -1,68 +1,56 @@
+// The program plot a mandelbrot the famous set
 package main
 
 import (
 	"fmt"
 	"time"
 
-	// the colours are defined in the file caled palette.go in the mandlebrot directory
-	"github.com/gophercoders/codeclub/mandelbrot/palette"
-
-	// This is the graphics library we are going to use. It is called the
-	// Simple Direct Media Library. SDL for short. We need this to create the
-	// window and to provide the drawing functions we need.
-	"github.com/veandco/go-sdl2/sdl"
+	// the colours are defined in the file caled palette.go in the toolbox directory
+	"github.com/gophercoders/toolbox/palette"
+	// load the toolbox
+	"github.com/gophercoders/toolbox"
 )
 
 // These are the variables for the graphics library
 // They have to be outside of the main function because the functions at the
 // end of the file need them.
 // This the window we are going to draw into
-var window *sdl.Window
-
-// This the abstraction to the graphics hardware inside the computer
-// that actually does the drawing
-var renderer *sdl.Renderer
+var window toolbox.Window
 
 // These constants are important. They are the width and height of the window
-// A constant just menas you can't change these values once the
+// A constant is just means you can't change these values once the
 // program starts running
 // If you change these you will change the size of the image
-// Try 800 for the width and 600 for the height
+// try starting with 800 for the width and 600 for the height, or 640 by 480
 const windowWidth = 1024
 const windowHeight = 768
 
-// Plot stores the colour of every point on the screen
+// plot stores the colour of every point on the screen
 // Technically this is an "array" but you can just think of
 // this as a very very long list!
-var plot [windowWidth][windowHeight]sdl.Color
+// At each elment of in the array we store the colour of that point.
+var plot [windowWidth][windowHeight]toolbox.Colour
 
 // The programs main function
 func main() {
-	// ---- This is the start of Owen's graphics setup code ----
-
-	// First we have to initalise the SDL library, before we can use it
-	sdl.Init(sdl.INIT_EVERYTHING)
+	// ---- This is the start of the graphics setup code ----
+	toolbox.Initialise()
 	// defer is a go keyword and a special feature.
-	// This means that go will automatically call the function sdl.Quit() before
+	// This means that go will automatically call the function toolbox.Close() before
 	// the program exits for us. We don't have to remember to put this at the end!
-	defer sdl.Quit()
+	defer toolbox.Close()
 
 	// Now we have to create the window we want to use.
-	// We need to tell the SDL library how big to make the window - that's what
-	// the bit in the brackets does
-	window = createWindow(windowWidth, windowHeight)
-	// automatically destroy the window when the program finishes
-	defer window.Destroy()
-	// Now we have a window we need to create a renderer so we can draw into
-	// it. In this case we want to use the first graphics card that supports faster
-	// drawing
-	renderer = createRenderer(window)
-	// automatically destroy the renderer when the program exits.
-	defer renderer.Destroy()
+	// We can use teh toolbox packae for this,
+	window = toolbox.CreateWindow("Julia", windowWidth, windowHeight)
+	// defer is a new keyword.
+	// It just means that the DestroyWindow function will be called
+	// automatically before the program exists. This ensures
+	// that the window is correctly destroyed.
+	defer toolbox.DestroyWindow(window)
+	// ---- This is the end of the graphics setup code ----
 
-	// ---- This is the end of Owen's graphics setup code ----
-
-	// These are the maximum and minimum values on the julia graph
+	// These are the maximum and minimum values on the mandelbrot graph
 	// float64 is the type go uses for decimal fractions
 	var minRe float64 // this is the minumin in the x axis
 	var maxRe float64 // this is the maximum in the x axis
@@ -71,9 +59,9 @@ func main() {
 
 	// set the values for the minimum, and maximum in the x axis and the minimum
 	// in the y axis
-	minRe = -2.2
-	maxRe = 1.0
-	minIm = -1.2
+	minRe = -1.8
+	maxRe = 1.2
+	minIm = -1.1
 
 	// calculate maxIm the maximum in the y axis. If we calculate this value we
 	// can use the aspect ratio of the window to make sure the image is not
@@ -100,8 +88,8 @@ func main() {
 	var y int
 
 	// this is the value of c - the value of the current pixel
-	var currentRe float64 // the real part
-	var currentIm float64 // the imaginary part
+	var cRe float64 // the real part
+	var cIm float64 // the imaginary part
 
 	// These are the loop variabels that control how many times we have done the
 	// calculation
@@ -109,8 +97,16 @@ func main() {
 	var loopCount = 0
 	// This is the maximum number of times around the loop. This number needs to
 	// be big. The bigger the number the more detail you see (up to the screen resolution)
-	// but the longer the images takes to draw. Try values of 10, 25, 50
+	// but the longer the images takes to draw. Try values of 17, 35, 69
 	var maxLoopCount = 138 // this is the size of the palette. Multiples of this number are good
+
+	// This is the evalue of K the constant that is added each time around
+	// the inner loop.
+	// Change these, even by just a littel bit, to get a different pattern
+	var kIm float64
+	kIm = 0.50
+	var kRe float64
+	kRe = 0.3
 
 	// this is the value of Z
 	var zRe float64 // the real part
@@ -122,34 +118,32 @@ func main() {
 	var zImSqrd float64 // zIm * zIM
 
 	// this is the colour of the pixel to plot
-	var color sdl.Color
-
-	// This is the evalue of K the constant that is added each time around
-	// the inner loop.
-	// Change these to get a different pattern
-	var kIm = 0.288
-	var kRe = 0.353
+	// The new type comes form the toolbox. It represents colour as 4 numbers.
+	// One for red, one for green, one for blue and one for transparancy.
+	var colour toolbox.Colour
 
 	// timing
+	// The program time how long it takes to plot the mandelbrot set.
+	// time.Time is a new type, that deals with timing. It measures time
+	// in milliseconds - 1 millionth of a second
 	var startTime time.Time
 	startTime = time.Now()
 
-	// The equation is
+	// The equation for the mandelbrot set is
 	//
-	//	next Z = (Z * Z) + K
+	//	next Z = (Z * Z) + k
 	//
-	//  K is a constant number, with both a real and imaginary part
-	//	Z's initial valeu is c, the current value of the pixel in the julia set
-
+	//  k is a constant value
+	//
 	// 	If we do this calculation HUNDREDS of times then if the absolute value of Z
-	// 	is greater than 4 then Z is not in the julia set.
-	//	Otherwise Z is in the julia set.
+	// 	is greater than 4 then c is not in the mandelbrot set. This gives us a coloured pixel.
+	//	Otherwise c is in the mandelbrot set. This gives us a black pixel.
 	//
 	// The Algorithm is
 	//
 	// for every pixel in the image - working top to bottom, left to right
 	// 		work out the value of c that the pixel represents
-	//		copy the current values of c to z
+	//		copy the current values to c to z
 	//		loop count = 0
 	//		for loop count < MaxLoopCount
 	//			if absolute value of Z > 4 		// this is the escape test!
@@ -168,13 +162,12 @@ func main() {
 	// remember to make y bigger by one just before the end of the loop
 	y = 0
 	for y < windowHeight {
-
 		// Now you have to work out the value of c that the pixel represents
 		// We do this in two parts. First the imaginary part.
 		// the current imaginary value of y is
 		// maxIm - y * imFactor
 		// see Owen for help with this bit!
-		currentIm = maxIm - float64(y)*imFactor
+		cIm = maxIm - float64(y)*imFactor
 
 		// Now you have to work left to right. So you need to loop over the value of
 		// x while x is less than the window width
@@ -184,16 +177,16 @@ func main() {
 		for x < windowWidth {
 			// Now we need to work out the real part of c
 			// the current real value of x is
-			// minRe + y * reFactor
+			// minRe + x * reFactor
 			// you need to use the same tip Owen gave you before
-			currentRe = minRe + float64(x)*reFactor
+			cRe = minRe + float64(x)*reFactor
 
 			// now we have to copy c to Z.
 			// Easy - just two assignments.
-			zRe = currentRe
-			zIm = currentIm
+			zRe = cRe
+			zIm = cIm
 
-			// Now we have to do the calculation (Z * Z) + K hundres of times!
+			// Now we have to do the calculation (Z * Z) + c hundres of times!
 			// You need another loop!
 			// Set loopCount to zero
 			loopCount = 0
@@ -220,7 +213,7 @@ func main() {
 				// set zIm to 2 * zRe * zIm + kIm
 				zIm = 2*zRe*zIm + kIm
 				// now you need to calculate a new value of Z's real part
-				// set zRe to zReSqrd - zReSqrd + kRe
+				// set zRe to zReSqrd - zImSqrd + kRe
 				zRe = zReSqrd - zImSqrd + kRe
 				// remember to make you loop counter one bigger here!
 				loopCount = loopCount + 1
@@ -234,12 +227,12 @@ func main() {
 			// getColor the number of times around the loop by putting loopCount
 			// inside the brackets.You need to assign the result to
 			// the variable called color. Like this
-			// color = getColor(loopCount)
-			color = getColor(loopCount)
+			// colour = getColor(loopCount)
+			colour = getColor(loopCount)
 			// Now you need to plot the point in the Window
 			// You have to use the draw point function for this like this
 			// drawPoint(x, y, color)
-			drawPoint(x, y, color)
+			drawPoint(x, y, colour)
 			// now make x bigger here!
 			x = x + 1
 		}
@@ -254,75 +247,52 @@ func main() {
 
 	// Tell the user that you have finished
 	fmt.Println("Finished")
-
+	// now work out how long it took to draw the mandelbrot set.
+	// Fist get the finish time
 	var endTime time.Time
 	endTime = time.Now()
+	// now print out the differene between the start and end times.
 	fmt.Printf("The program took %v to run.\n", endTime.Sub(startTime))
 	// wait until you close the window before the program ends.
 	waitUntilCloseButtonIsPressed()
 }
 
-// Create the graphics window using the SDl library or crash trying
-func createWindow(w, h int) *sdl.Window {
-	var window *sdl.Window
-	var err error
+//----------------- Don't change anythign below this line! ----------------
 
-	window, err = sdl.CreateWindow("Julia Set", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
-		w, h, sdl.WINDOW_SHOWN)
-	if err != nil {
-		panic(err)
-	}
-	return window
-}
-
-// Create the graphics renderer or crash trying
-func createRenderer(w *sdl.Window) *sdl.Renderer {
-	var r *sdl.Renderer
-	var err error
-	r, err = sdl.CreateRenderer(w, -1, sdl.RENDERER_ACCELERATED)
-	if err != nil {
-		panic(err)
-	}
-	return r
-}
-
-// Get a colout form the palette based on the number of iterations
-func getColor(count int) sdl.Color {
-	var c sdl.Color
-	// try changing BluePalette to RedPalette to draw the julia in red
-	c = palette.BluePalette[count%len(palette.BluePalette)]
+// Get a colour from the palette based on the number of iterations
+func getColor(count int) toolbox.Colour {
+	var c toolbox.Colour
+	// try changing RedPalette to RedPalette to draw the mandelbrot in blue
+	c = palette.RedPalette[count%len(palette.RedPalette)]
 	return c
 }
 
 // Plot the point x, y on window with the colour c
-func drawPoint(x, y int, c sdl.Color) {
+func drawPoint(x, y int, c toolbox.Colour) {
 	plot[x][y].R = c.R
 	plot[x][y].G = c.G
 	plot[x][y].B = c.B
 	plot[x][y].A = c.A
 }
 
-// Render or Draw the picture to the window
+// Render or draw the picture to the window
 func render(maxX, maxY int) {
 	var x int
 	var y int
 	x = 0
 	y = 0
-	renderer.Clear()
+	toolbox.SetBackgroundColour(0, 0, 0)
+	toolbox.ClearBackground()
 	for y < maxY {
 		for x < maxX {
-			renderer.SetDrawColor(plot[x][y].R, plot[x][y].G, plot[x][y].B, plot[x][y].A)
-			var err error
-			err = renderer.DrawPoint(x, y)
-			if err != nil {
-				panic(err)
-			}
+			toolbox.SetDrawColour(plot[x][y])
+			toolbox.DrawPoint(x, y)
 			x = x + 1
 		}
 		y = y + 1
 		x = 0
 	}
-	renderer.Present()
+	toolbox.ShowWindow()
 }
 
 // Wait for the event that tells us that the user has pressed windows close
@@ -330,14 +300,12 @@ func render(maxX, maxY int) {
 func waitUntilCloseButtonIsPressed() {
 	var quit bool
 	quit = false
-	var event sdl.Event
+	var key toolbox.Key
 
 	for quit != true {
-		for event = sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
-				quit = true
-			}
+		key = toolbox.GetKey()
+		if key == toolbox.ButtonClose {
+			quit = true
 		}
 	}
 }
