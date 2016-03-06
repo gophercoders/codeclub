@@ -80,8 +80,8 @@ func main() {
 	var imFactor float64
 
 	// calculate the scaling values
-	reFactor = (maxRe - minRe) / float64(windowWidth-1)
-	imFactor = (maxIm - minIm) / float64(windowHeight-1)
+	reFactor = (maxRe - minRe) / float64(windowWidth)
+	imFactor = (maxIm - minIm) / float64(windowHeight)
 
 	// These are the screen (pixel) coordinates
 	var x int
